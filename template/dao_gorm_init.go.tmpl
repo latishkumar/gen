@@ -1,12 +1,18 @@
 package {{.daoPackageName}}
 
 import (
+	"fmt"
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
 
-	"gorm.io/gorm"
+	"{{.modelFQPN}}"
+
+	"github.com/jinzhu/gorm"
 )
 
 // BuildInfo is used to define the application build info, and inject values into via the build process.
@@ -91,3 +97,251 @@ func Copy(dst interface{}, src interface{}) error {
 func isZeroOfUnderlyingType(x interface{}) bool {
 	return x == nil || reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
+
+func FormatArray(value interface{}) string {
+	var aux string
+	var check = func(aux string, value interface{}) (ret string) {
+		if aux != "" {
+			aux += ","
+		}
+		ret = aux + FormatArray(value)
+		return
+	}
+	switch value.(type) {
+	case []fmt.Stringer:
+		for _, v := range value.([]fmt.Stringer) {
+			aux = check(aux, v)
+		}
+		return "{" + aux + "}"
+	case []interface{}:
+		for _, v := range value.([]interface{}) {
+			aux = check(aux, v)
+		}
+		return "{" + aux + "}"
+	case []string:
+		for _, v := range value.([]string) {
+			aux = check(aux, v)
+		}
+		return "{" + aux + "}"
+	case []int:
+		for _, v := range value.([]int) {
+			aux = check(aux, v)
+		}
+		return "{" + aux + "}"
+	case string:
+		aux := value.(string)
+		aux = strings.Replace(aux, `\`, `\\`, -1)
+		aux = strings.Replace(aux, `"`, `\"`, -1)
+		return `"` + aux + `"`
+	case int:
+		return strconv.Itoa(value.(int))
+	case fmt.Stringer:
+		v := value.(fmt.Stringer)
+		return FormatArray(v.String())
+	}
+	return ""
+}
+
+// chkInvalidIdentifier return true if identifier is invalid
+func chkInvalidIdentifier(identifer ...string) bool {
+	for _, ival := range identifer {
+		if ival == "" || len(ival) > 63 || unicode.IsDigit([]rune(ival)[0]) {
+			return true
+		}
+		count := 0
+		for _, v := range ival {
+			if !unicode.IsLetter(v) &&
+				!unicode.IsDigit(v) &&
+				v != '(' &&
+				v != ')' &&
+				v != '_' &&
+				v != '.' &&
+				v != '-' &&
+				v != '*' &&
+				v != '[' &&
+				v != ']' &&
+				v != '"' {
+				return true
+			}
+			if unicode.Is(unicode.Quotation_Mark, v) {
+				count++
+			}
+		}
+		if count%2 != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func GetQueryOperator(op string) (string, error) {
+
+	op = strings.Replace(op, "|", "", -1)
+
+	op = strings.Replace(op, " ", "", -1)
+
+	switch op {
+		case "eq":
+			return "=", nil
+		case "ne":
+			return "!=", nil
+		case "gt":
+			return ">", nil
+		case "gte":
+			return ">=", nil
+		case "lt":
+			return "<", nil
+		case "lte":
+			return "<=", nil
+		case "in":
+			return "IN", nil
+		case "nin":
+			return "NOT IN", nil
+		case "any":
+			return "ANY", nil
+		case "some":
+			return "SOME", nil
+		case "all":
+			return "ALL", nil
+		case "notnull":
+			return "IS NOT NULL", nil
+		case "null":
+			return "IS NULL", nil
+		case "true":
+			return "IS TRUE", nil
+		case "nottrue":
+			return "IS NOT TRUE", nil
+		case "false":
+			return "IS FALSE", nil
+		case "notfalse":
+			return "IS NOT FALSE", nil
+		case "like":
+			return "LIKE", nil
+		case "ilike":
+			return "ILIKE", nil
+	}
+
+	err := errors.New("Invalid operator")
+
+	return "", err
+
+}
+
+func GetFilterConditionsAndValues(queryMap map[string][]string, cols []*model.ColumnInfo) (condition string, values []interface{}, err error) {
+
+	// added some comment
+	
+	removeOperatorRegex := regexp.MustCompile(`\|[a-z]+`)
+
+	whereKey := []string{}
+
+	whereValues := []string{}
+
+	fmt.Printf("Columns : %v \n", cols)
+		
+	var field, op string
+
+	pid := 1
+
+	for key, val := range queryMap {
+
+		fmt.Printf("Key: %v \t Value: %v", key, val)
+
+		if !strings.HasPrefix(key, "_") {
+			
+			if key != "" {
+
+				op = removeOperatorRegex.FindString(key)
+
+				if op == "" {
+
+					op = "|eq"
+				}
+
+				jsonField := removeOperatorRegex.ReplaceAllString(key, "")
+
+				validField := false
+
+				for _, col := range cols {
+
+					if col.JSONFieldName == jsonField {
+
+						validField = true
+
+						field = col.GoFieldName
+
+						break
+
+					}
+				}
+
+				if validField == false {
+
+					// jsonField is not valid one
+					continue
+				}
+
+				op, err = GetQueryOperator(op)
+
+				if err != nil {
+
+					return
+
+				}
+			}
+
+			if chkInvalidIdentifier(field) {
+				err = fmt.Errorf("invalid identifier: %s", field)
+				return
+			}
+
+
+			switch op {
+
+			case "IN", "NOT IN":
+
+				v := val //strings.Split(arrinput, ",")
+				keyParams := make([]string, len(v))
+				for i := 0; i < len(v); i++ {
+					whereValues = append(whereValues, v[i])
+					keyParams[i] = fmt.Sprintf(`$%d`, pid+i)
+				}
+				pid += len(v)
+				whereKey = append(whereKey, fmt.Sprintf(`%s %s (%s)`, field, op, strings.Join(keyParams, ",")))
+
+				fmt.Printf("\n VALUE: %v \n", v)
+
+				//whereKey = append(whereKey, fmt.Sprintf(`%s %s (%s)`, field, op, arrinput))
+
+			case "ANY", "SOME", "ALL":
+				whereKey = append(whereKey, fmt.Sprintf(`%s = %s ($%d)`, field, op, pid))
+				whereValues = append(whereValues, FormatArray(val))
+				pid++
+
+			case "IS NULL", "IS NOT NULL", "IS TRUE", "IS NOT TRUE", "IS FALSE", "IS NOT FALSE":
+				whereKey = append(whereKey, fmt.Sprintf(`%s %s`, field, op))
+
+			default: // "=", "!=", ">", ">=", "<", "<="
+				whereKey = append(whereKey, fmt.Sprintf(`%s %s $%d`, field, op, pid))
+				whereValues = append(whereValues, val[0])
+				pid++
+			}
+
+		}
+	}
+
+	for i := 0; i < len(whereKey); i++ {
+		if condition == "" {
+			condition += whereKey[i]
+		} else {
+			condition += " AND " + whereKey[i]
+		}
+	}
+
+	for i := 0; i < len(whereValues); i++ {
+		values = append(values, whereValues[i])
+	}
+	return
+}
+
+

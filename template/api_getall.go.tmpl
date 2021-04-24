@@ -29,12 +29,15 @@ func GetAll{{.StructName}}(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	order := r.FormValue("order")
 
+	filter := r.URL.Query()
+
+
 	if err := ValidateRequest(ctx, r, "{{.TableName}}", {{.modelPackageName}}.RetrieveMany); err != nil{
 		returnError(ctx, w, r, err)
 		return
 	}
 
-    records, totalRows, err :=  {{.daoPackageName}}.GetAll{{.StructName}}(ctx, page, pagesize, order)
+    records, totalRows, err :=  {{.daoPackageName}}.GetAll{{.StructName}}(ctx, filter, page, pagesize, order)
 	if err != nil {
 	    returnError(ctx, w, r, err)
 		return

@@ -4,11 +4,36 @@
 // params - pagesize - number of records in a page  (defaults to 20)
 // params - order    - db sort order column
 // error - ErrNotFound, db Find error
-func GetAll{{.StructName}}(ctx context.Context, page, pagesize int, order string) (results []*{{.modelPackageName}}.{{.StructName}}, totalRows int64, err error) {
+func GetAll{{.StructName}}(ctx context.Context, filter map[string][]string,  page, pagesize int64, order string) (results []*{{.modelPackageName}}.{{.StructName}}, totalRows int, err error) {
 
-	resultOrm := DB.Model(&{{.modelPackageName}}.{{.StructName}}{})
+	// get the model reference
+
+	model := {{.modelPackageName}}.{{.StructName}}{}
+
+	// get corresponding table info
+
+	cols := model.TableInfo().Columns
+
+	fmt.Printf("Cols: %v \n", cols)
+	
+	resultOrm := DB.Model(&model)
+
+	// appy the filter condition
+
+	whereCondition, whereValues, err := GetFilterConditionsAndValues(filter, cols)
+
+	if err != nil {
+
+		fmt.Printf("ERROR in parsing the filter condition: %v \n", err)
+	}
+
+	fmt.Printf("wherevalues: %v \n", whereValues)
+
+	resultOrm = resultOrm.Where(whereCondition, whereValues)
+
+
     resultOrm.Count(&totalRows)
-
+	
 	if page > 0 {
 		offset := (page - 1) * pagesize
 		resultOrm = resultOrm.Offset(offset).Limit(pagesize)

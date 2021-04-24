@@ -19,6 +19,8 @@ import (
 	"github.com/swaggo/gin-swagger" // gin-swagger middleware
 	"github.com/droundy/goopt"
 
+	"github.com/gin-contrib/cors"
+
 	"{{.module}}/{{.apiPackageName}}"
     "{{.module}}/{{.daoPackageName}}"
     _ "{{.module}}/docs"
@@ -53,6 +55,9 @@ func GinServer() (err error){
 	url := ginSwagger.URL("{{$.serverScheme}}://{{.serverHost}}{{if ne $.serverPort 80}}:{{$.serverPort}}{{end}}/swagger/doc.json") // The url pointing to API definition
 
 	router := gin.Default()
+	
+	router.Use(cors.Default())
+	
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 
 	{{.apiPackageName}}.ConfigGinRouter(router)
@@ -111,8 +116,10 @@ func main() {
 		fmt.Printf("SQL: %s\n", sql)
 	}
 
-	go GinServer()
-    LoopForever()
+	GinServer()
+	
+	//go GinServer()
+    //LoopForever()
 }
 
 
