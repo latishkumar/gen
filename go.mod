@@ -2,7 +2,7 @@ module github.com/latishkumar/gen
 
 go 1.13
 
-replace github.com/smallnest/gen => /home/sai/go/src/github.com/latishkumar/gen
+replace github.com/latishkumar/gen => /home/sai/go/src/github.com/latishkumar/gen
 
 require (
 	github.com/bxcodec/faker/v3 v3.6.0
