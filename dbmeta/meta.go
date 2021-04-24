@@ -415,7 +415,16 @@ func (c *Config) GenerateFieldsTypes(dbMeta DbTableMeta) ([]*FieldInfo, error) {
 		fi.GoAnnotations = annotations
 		fi.FakeData = fakeData
 		fi.Comment = col.String()
-		fi.JSONFieldName = formatFieldName(c.JSONNameFormat, col.Name())
+		// LATISH changes
+
+		if col.IsPrimaryKey() {
+
+			fi.JSONFieldName = "id"
+
+		} else {
+
+			fi.JSONFieldName = formatFieldName(c.JSONNameFormat, col.Name())
+		}
 		fi.ProtobufFieldName = formatFieldName(c.ProtobufNameFormat, col.Name())
 		fi.ProtobufType = protobufType
 		fi.ProtobufPos = i + 1
@@ -451,7 +460,16 @@ func formatFieldName(nameFormat string, name string) string {
 }
 
 func createJSONAnnotation(nameFormat string, c ColumnMeta) string {
+
+	// latish added
+
+	if c.IsPrimaryKey() {
+
+		return fmt.Sprintf("json:\"%s\"", "id")
+	}
+
 	name := formatFieldName(nameFormat, c.Name())
+
 	return fmt.Sprintf("json:\"%s\"", name)
 }
 
