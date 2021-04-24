@@ -759,14 +759,23 @@ func GenerateModelInfo(tables map[string]*ModelInfo, dbMeta DbTableMeta,
 	for i, c := range fields {
 		meta := dbMeta.Columns()[i]
 		jsonName := formatFieldName(conf.JSONNameFormat, meta.Name())
-		tag := fmt.Sprintf(`json:"%s"`, jsonName)
-		fakeData := c.FakeData
-		generator = generator.AddField(c.GoFieldName, fakeData, tag)
+
 		if meta.IsPrimaryKey() {
 			//c.PrimaryKeyArgName = RenameReservedName(strcase.ToLowerCamel(c.GoFieldName))
 			c.PrimaryKeyArgName = fmt.Sprintf("arg%s", FmtFieldName(c.GoFieldName))
 			noOfPrimaryKeys++
+
+			// LATISH: START
+			// If the field is primary make jsonName as id
+			fmt.Printf("MAKING Primary key json id as ID \n ")
+
+			jsonName = "id"
+			// LATISH: END
+
 		}
+		tag := fmt.Sprintf(`json:"%s"`, jsonName)
+		fakeData := c.FakeData
+		generator = generator.AddField(c.GoFieldName, fakeData, tag)
 	}
 
 	instance := generator.Build().New()
