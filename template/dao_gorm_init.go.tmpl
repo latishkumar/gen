@@ -278,6 +278,7 @@ func GetFilterConditionsAndValues(queryMap map[string][]string, cols []*model.Co
 				if validField == false {
 
 					// jsonField is not valid one
+					fmt.Printf("INVALID filterfield: %v, ignoring", jsonField)
 					continue
 				}
 
