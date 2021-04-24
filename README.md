@@ -51,7 +51,7 @@ Code generation for a complete CRUD rest project is possible with DAO crud funct
 $ go get -u github.com/smallnest/gen
 
 ## download sample sqlite database
-$ wget https://github.com/smallnest/gen/raw/master/example/sample.db
+$ wget https://github.com/latishkumar/gen/raw/master/example/sample.db
 
 ## generate code based on the sqlite database (project will be contained within the ./example dir)
 $ gen --sqltype=sqlite3 \
