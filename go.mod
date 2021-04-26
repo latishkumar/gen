@@ -2,8 +2,6 @@ module github.com/latishkumar/gen
 
 go 1.13
 
-replace github.com/latishkumar/gen => /home/sai/go/src/github.com/latishkumar/gen
-
 require (
 	github.com/bxcodec/faker/v3 v3.6.0
 	github.com/davecgh/go-spew v1.1.1
@@ -20,5 +18,4 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/ompluscator/dynamic-struct v1.3.0
 	github.com/serenize/snaker v0.0.0-20201027110005-a7ad2135616e
-	github.com/smallnest/gen v0.9.29
 )
