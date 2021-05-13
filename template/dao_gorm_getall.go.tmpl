@@ -41,8 +41,26 @@ func GetAll{{.StructName}}(ctx context.Context, filter map[string][]string,  pag
 		resultOrm = resultOrm.Limit(pagesize)
     }
 
+	// translate order parameter to db column name
+
 	if order != "" {
-		resultOrm = resultOrm.Order(order)
+
+		orderCriteria := strings.Split(order," ")
+		
+		for _, col := range cols {
+
+			if col.JSONFieldName == orderCriteria[0] {
+
+				fmt.Printf("FOUND db column name for order paramter")
+
+				orderCriteria[0] = col.GoFieldName
+
+				break
+
+			}
+		}
+
+		resultOrm = resultOrm.Order(strings.Join(orderCriteria," "))
 	}
 
 	if err = resultOrm.Find(&results).Error; err != nil {
