@@ -106,12 +106,11 @@ func FormatArray(value interface{}) string {
 		}
 		ret = aux + FormatArray(value)
 		return
-	}
-	switch value.(type) {
+	}	switch value.(type) {
 	case []fmt.Stringer:
 		for _, v := range value.([]fmt.Stringer) {
 			aux = check(aux, v)
-		}
+	}
 		return "{" + aux + "}"
 	case []interface{}:
 		for _, v := range value.([]interface{}) {
@@ -229,16 +228,14 @@ func GetQueryOperator(op string) (string, error) {
 
 func GetFilterConditionsAndValues(queryMap map[string][]string, cols []*model.ColumnInfo) (condition string, values []interface{}, err error) {
 
-	// added some comment
-	
+		
 	removeOperatorRegex := regexp.MustCompile(`\|[a-z]+`)
 
 	whereKey := []string{}
 
 	whereValues := []string{}
 
-	fmt.Printf("Columns : %v \n", cols)
-		
+			
 	var field, op string
 
 	pid := 1
@@ -278,7 +275,7 @@ func GetFilterConditionsAndValues(queryMap map[string][]string, cols []*model.Co
 				if validField == false {
 
 					// jsonField is not valid one
-					fmt.Printf("INVALID filterfield: %v, ignoring", jsonField)
+					fmt.Printf("INVALID filter field: %v, ignoring \n", jsonField)
 					continue
 				}
 
